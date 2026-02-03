@@ -5,12 +5,8 @@ interface Task {
   id: string;
   platform: 'x' | 'instagram' | 'facebook' | 'tiktok';
   url: string;
-  x_caption: string;
-  ig_caption: string;
-  fb_caption: string;
-  tiktok_caption: string;
   hashtags: string;
-  note: string;
+  title: string;
 }
 
 interface CompletedState {
@@ -51,28 +47,24 @@ const platformConfig = {
     icon: <XIcon />,
     color: 'from-zinc-800 to-zinc-900',
     hoverColor: 'hover:from-zinc-700 hover:to-zinc-800',
-    captionField: 'x_caption' as const,
   },
   instagram: {
     name: 'IG',
     icon: <InstagramIcon />,
     color: 'from-pink-500 to-purple-600',
     hoverColor: 'hover:from-pink-400 hover:to-purple-500',
-    captionField: 'ig_caption' as const,
   },
   facebook: {
     name: 'FB',
     icon: <FacebookIcon />,
     color: 'from-blue-600 to-blue-700',
     hoverColor: 'hover:from-blue-500 hover:to-blue-600',
-    captionField: 'fb_caption' as const,
   },
   tiktok: {
     name: 'TT',
     icon: <TikTokIcon />,
     color: 'from-zinc-900 to-pink-600',
     hoverColor: 'hover:from-zinc-800 hover:to-pink-500',
-    captionField: 'tiktok_caption' as const,
   },
 };
 
@@ -143,12 +135,8 @@ function App() {
             id: values[headers.indexOf('id')] || String(i),
             platform: (values[headers.indexOf('platform')] || 'x').toLowerCase() as Task['platform'],
             url: values[headers.indexOf('url')] || '',
-            x_caption: values[headers.indexOf('x_caption')] || '',
-            ig_caption: values[headers.indexOf('ig_caption')] || '',
-            fb_caption: values[headers.indexOf('fb_caption')] || '',
-            tiktok_caption: values[headers.indexOf('tiktok_caption')] || '',
             hashtags: values[headers.indexOf('hashtags')] || '',
-            note: values[headers.indexOf('note')] || '',
+            title: values[headers.indexOf('title')] || values[headers.indexOf('note')] || '',
           };
 
           if (task.url) {
@@ -226,11 +214,9 @@ function App() {
     return counts;
   }, [tasks, completed]);
 
-  // Get caption for platform
+  // Get hashtags for platform
   const getCaption = (task: Task): string => {
-    const config = platformConfig[task.platform];
-    const caption = task[config.captionField] || '';
-    return caption + (task.hashtags ? '\n\n' + task.hashtags : '');
+    return task.hashtags || '';
   };
 
   // Copy to clipboard
@@ -424,10 +410,10 @@ function App() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-white/90 truncate">
-                        {task.note || 'ไม่มีหมายเหตุ'}
+                        {task.title || 'ไม่มีชื่อเรื่อง'}
                       </div>
                       <div className="text-xs text-white/40 truncate">
-                        {getCaption(task).split('\n')[0] || task.hashtags}
+                        {task.hashtags}
                       </div>
                     </div>
 
@@ -523,7 +509,7 @@ function App() {
                       <h2 className="text-lg font-bold text-white">
                         {platformConfig[selectedTask.platform].name}
                       </h2>
-                      <p className="text-white/60 text-sm">{selectedTask.note}</p>
+                      <p className="text-white/60 text-sm">{selectedTask.title}</p>
                     </div>
                   </div>
                   <button
@@ -540,11 +526,11 @@ function App() {
                 {/* Caption Box */}
                 <div>
                   <label className="text-purple-300 text-sm font-medium mb-2 block">
-                    📝 ข้อความที่ต้องโพสต์:
+                    📝 Hashtags ที่ต้องใช้:
                   </label>
                   <div className="bg-white/5 rounded-xl p-4 border border-white/10 max-h-40 overflow-y-auto">
                     <p className="text-white whitespace-pre-wrap leading-relaxed text-sm">
-                      {getCaption(selectedTask) || 'ไม่มีข้อความ'}
+                      {selectedTask.hashtags || 'ไม่มี Hashtags'}
                     </p>
                   </div>
                 </div>
