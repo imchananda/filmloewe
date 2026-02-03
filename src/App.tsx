@@ -117,7 +117,10 @@ function App() {
       try {
         setLoading(true);
         const response = await fetch(SHEET_URL);
-        const csvText = await response.text();
+        let csvText = await response.text();
+
+        // Remove Byte Order Mark (BOM) if exists
+        csvText = csvText.replace(/^\uFEFF/, '');
 
         // Parse CSV
         const lines = csvText.split('\n');
@@ -131,12 +134,17 @@ function App() {
           // Handle CSV with commas in quoted strings
           const values = parseCSVLine(lines[i]);
 
+          const getVal = (headerName: string) => {
+            const idx = headers.indexOf(headerName);
+            return idx !== -1 ? values[idx] : '';
+          };
+
           const task: Task = {
-            id: values[headers.indexOf('id')] || String(i),
-            platform: (values[headers.indexOf('platform')] || 'x').toLowerCase() as Task['platform'],
-            url: values[headers.indexOf('url')] || '',
-            hashtags: values[headers.indexOf('hashtags')] || '',
-            title: values[headers.indexOf('title')] || values[headers.indexOf('note')] || '',
+            id: getVal('id') || String(i),
+            platform: (getVal('platform') || 'x').toLowerCase() as Task['platform'],
+            url: getVal('url') || '',
+            hashtags: getVal('hashtags') || '',
+            title: getVal('title') || getVal('note') || '',
           };
 
           if (task.url) {
