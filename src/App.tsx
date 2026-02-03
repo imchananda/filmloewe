@@ -315,7 +315,7 @@ function App() {
             {/* Title row */}
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-lg font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200 bg-clip-text text-transparent">
-                ✨ Filmracha Loewe
+                ✨ Film x Loewe Mission
               </h1>
 
               <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
