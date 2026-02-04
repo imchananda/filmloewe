@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLanguage } from './i18n/LanguageContext';
 
 // Types
 interface Task {
@@ -76,6 +77,7 @@ const BACKGROUND_IMAGE = 'https://pbs.twimg.com/media/HAOoaBRaUAAtTqq?format=jpg
 // ===========================================
 
 function App() {
+  const { language, setLanguage, t } = useLanguage();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -282,7 +284,7 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-purple-200 text-lg">กำลังโหลดข้อมูล...</p>
+          <p className="text-purple-200 text-lg">{t('loading')}</p>
         </div>
       </div>
     );
@@ -309,13 +311,37 @@ function App() {
             {/* Title row */}
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-lg font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-amber-200 bg-clip-text text-transparent">
-                ✨ Film x Loewe Mission
+                {t('appTitle')}
               </h1>
 
-              <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
-                <span className="text-amber-300 text-sm font-semibold">{pendingCount}</span>
-                <span className="text-white/30 text-xs">/</span>
-                <span className="text-green-300 text-sm">{completedCount}</span>
+              <div className="flex items-center gap-2">
+                {/* Language Buttons */}
+                <div className="flex rounded-full overflow-hidden border border-white/20">
+                  <button
+                    onClick={() => setLanguage('th')}
+                    className={`px-2 py-1 text-xs font-bold transition-all ${language === 'th'
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-white/10 text-white/60 hover:bg-white/20'
+                      }`}
+                  >
+                    TH
+                  </button>
+                  <button
+                    onClick={() => setLanguage('en')}
+                    className={`px-2 py-1 text-xs font-bold transition-all ${language === 'en'
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-white/10 text-white/60 hover:bg-white/20'
+                      }`}
+                  >
+                    EN
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+                  <span className="text-amber-300 text-sm font-semibold">{pendingCount}</span>
+                  <span className="text-white/30 text-xs">/</span>
+                  <span className="text-green-300 text-sm">{completedCount}</span>
+                </div>
               </div>
             </div>
 
@@ -336,7 +362,7 @@ function App() {
                   : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
                   }`}
               >
-                ทั้งหมด ({pendingCount})
+                {t('all')} ({pendingCount})
               </button>
 
               {(['x', 'instagram', 'facebook', 'tiktok'] as const).map(p => {
@@ -364,7 +390,7 @@ function App() {
                   : 'bg-white/5 border-white/10 text-white/40'
                   }`}
               >
-                {showCompleted ? '✓ ซ่อน' : '○ แสดง'}
+                {showCompleted ? t('hide') : t('show')}
               </button>
             </div>
           </div>
@@ -374,7 +400,7 @@ function App() {
         {error && (
           <div className="max-w-lg mx-auto px-4 py-4">
             <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-4 text-red-200">
-              {error}
+              {t('error')}
             </div>
           </div>
         )}
@@ -397,7 +423,7 @@ function App() {
                   {isFirstCompleted && showCompleted && (
                     <div className="flex items-center gap-2 py-3">
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
-                      <span className="text-green-400/60 text-xs">เสร็จแล้ว {completedCount}</span>
+                      <span className="text-green-400/60 text-xs">{t('completed')} {completedCount}</span>
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                     </div>
                   )}
@@ -418,7 +444,7 @@ function App() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-white/90 truncate">
-                        {task.title || 'ไม่มีชื่อเรื่อง'}
+                        {task.title || t('noTitle')}
                       </div>
                       <div className="text-xs text-white/40 truncate">
                         {task.hashtags}
@@ -449,21 +475,21 @@ function App() {
             {/* Load more indicator */}
             {visibleCount < filteredTasks.length && (
               <div className="text-center py-4 text-white/40 text-xs">
-                เลื่อนเพื่อโหลดเพิ่ม... ({visibleCount}/{filteredTasks.length})
+                {t('scrollToLoad')} ({visibleCount}/{filteredTasks.length})
               </div>
             )}
 
             {tasks.length === 0 && !error && !loading && (
               <div className="text-center py-12 text-purple-300/60">
                 <p className="text-4xl mb-4">📭</p>
-                <p>ยังไม่มีรายการ</p>
+                <p>{t('noTasks')}</p>
               </div>
             )}
 
             {filteredTasks.length === 0 && tasks.length > 0 && (
               <div className="text-center py-12 text-white/40">
                 <p className="text-4xl mb-4">🎉</p>
-                <p>ทำครบหมดแล้ว!</p>
+                <p>{t('allDone')}</p>
               </div>
             )}
           </div>
@@ -473,19 +499,19 @@ function App() {
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-xl rounded-full px-5 py-2.5 border border-white/10 flex items-center gap-4 shadow-2xl shadow-black/50 z-30">
           <div className="text-center">
             <div className="text-lg font-bold text-amber-300">{pendingCount}</div>
-            <div className="text-[10px] text-white/50">รอทำ</div>
+            <div className="text-[10px] text-white/50">{t('pending')}</div>
           </div>
           <div className="w-px h-8 bg-white/10" />
           <div className="text-center">
             <div className="text-lg font-bold text-green-400">{completedCount}</div>
-            <div className="text-[10px] text-white/50">เสร็จ</div>
+            <div className="text-[10px] text-white/50">{t('done')}</div>
           </div>
           <div className="w-px h-8 bg-white/10" />
           <div className="text-center">
             <div className="text-lg font-bold text-purple-300">
               {tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0}%
             </div>
-            <div className="text-[10px] text-white/50">progress</div>
+            <div className="text-[10px] text-white/50">{t('progress')}</div>
           </div>
         </div>
       </div>
@@ -534,11 +560,11 @@ function App() {
                 {/* Caption Box */}
                 <div>
                   <label className="text-purple-300 text-sm font-medium mb-2 block">
-                    📝 Hashtags ที่ต้องใช้:
+                    {t('hashtagsLabel')}
                   </label>
                   <div className="bg-white/5 rounded-xl p-4 border border-white/10 max-h-40 overflow-y-auto">
                     <p className="text-white whitespace-pre-wrap leading-relaxed text-sm">
-                      {selectedTask.hashtags || 'ไม่มี Hashtags'}
+                      {selectedTask.hashtags || t('noHashtags')}
                     </p>
                   </div>
                 </div>
@@ -551,7 +577,7 @@ function App() {
                     : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
                     }`}
                 >
-                  {copied ? '✓ คัดลอกแล้ว!' : '📋 คัดลอกข้อความ'}
+                  {copied ? t('copied') : t('copyText')}
                 </button>
 
                 {/* Go to Post Button */}
@@ -559,7 +585,7 @@ function App() {
                   onClick={() => handleGoToPost(selectedTask)}
                   className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${platformConfig[selectedTask.platform].color} ${platformConfig[selectedTask.platform].hoverColor} transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02]`}
                 >
-                  🚀 ไปโพสต์เลย!
+                  {t('goPost')}
                 </button>
 
                 {/* Mark Complete Button */}
@@ -568,7 +594,7 @@ function App() {
                     onClick={() => handleMarkComplete(selectedTask.id)}
                     className="w-full py-3 rounded-xl font-semibold bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30 transition-all duration-300"
                   >
-                    ✓ ทำเสร็จแล้ว
+                    {t('markDone')}
                   </button>
                 )}
               </div>
