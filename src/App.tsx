@@ -113,6 +113,62 @@ function App() {
     localStorage.setItem('social-tracker-completed', JSON.stringify(completed));
   }, [completed, hasLoaded]);
 
+  // Parse entire CSV text handling quoted strings with newlines
+  const parseCSV = (csvText: string): string[][] => {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentCell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < csvText.length; i++) {
+      const char = csvText[i];
+      const nextChar = csvText[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote ("") - add single quote to cell
+          currentCell += '"';
+          i++; // Skip next quote
+        } else {
+          // Toggle quote mode
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        // End of cell
+        currentRow.push(currentCell.trim());
+        currentCell = '';
+      } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !inQuotes) {
+        // End of row (handle both \n and \r\n)
+        currentRow.push(currentCell.trim());
+        if (currentRow.some(cell => cell !== '')) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = '';
+        if (char === '\r') i++; // Skip \n in \r\n
+      } else if (char === '\r' && !inQuotes) {
+        // Handle standalone \r as newline
+        currentRow.push(currentCell.trim());
+        if (currentRow.some(cell => cell !== '')) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = '';
+      } else {
+        // Regular character (including newlines inside quotes)
+        currentCell += char;
+      }
+    }
+
+    // Don't forget the last cell and row
+    currentRow.push(currentCell.trim());
+    if (currentRow.some(cell => cell !== '')) {
+      rows.push(currentRow);
+    }
+
+    return rows;
+  };
+
   // Fetch data from Google Sheets
   useEffect(() => {
     const fetchData = async () => {
@@ -124,21 +180,24 @@ function App() {
         // Remove Byte Order Mark (BOM) if exists
         csvText = csvText.replace(/^\uFEFF/, '');
 
-        // Parse CSV
-        const lines = csvText.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        // Parse CSV properly (handles newlines in quoted cells)
+        const rows = parseCSV(csvText);
 
+        if (rows.length === 0) {
+          setTasks([]);
+          setError(null);
+          return;
+        }
+
+        const headers = rows[0].map(h => h.toLowerCase());
         const parsedTasks: Task[] = [];
 
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-
-          // Handle CSV with commas in quoted strings
-          const values = parseCSVLine(lines[i]);
+        for (let i = 1; i < rows.length; i++) {
+          const values = rows[i];
 
           const getVal = (headerName: string) => {
             const idx = headers.indexOf(headerName);
-            return idx !== -1 ? values[idx] : '';
+            return idx !== -1 ? (values[idx] || '') : '';
           };
 
           const task: Task = {
@@ -167,29 +226,6 @@ function App() {
 
     fetchData();
   }, []);
-
-  // Parse CSV line handling quoted strings
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-
-    return result;
-  };
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
@@ -320,8 +356,8 @@ function App() {
                   <button
                     onClick={() => setLanguage('th')}
                     className={`px-2 py-1 text-xs font-bold transition-all ${language === 'th'
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-white/10 text-white/60 hover:bg-white/20'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
                       }`}
                   >
                     TH
@@ -329,8 +365,8 @@ function App() {
                   <button
                     onClick={() => setLanguage('en')}
                     className={`px-2 py-1 text-xs font-bold transition-all ${language === 'en'
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-white/10 text-white/60 hover:bg-white/20'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
                       }`}
                   >
                     EN
