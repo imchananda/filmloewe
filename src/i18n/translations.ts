@@ -31,6 +31,12 @@ export const translations = {
         copyText: '📋 คัดลอกข้อความ',
         goPost: '🚀 ไปโพสต์เลย!',
         markDone: '✓ ทำเสร็จแล้ว',
+
+        // Achievement
+        achievementTitle: 'นักปั่นเอนเกจตัวจริง!',
+        achievementDesc: 'ขอแสดงความยินดี! คุณทำ Mission ครบแล้ว 🎉',
+        downloadFrame: '⬇️ ดาวน์โหลดกรอบรูป',
+        shareToX: '📱 แชร์ไป X',
     },
     en: {
         // Header
@@ -62,6 +68,12 @@ export const translations = {
         copyText: '📋 Copy text',
         goPost: '🚀 Go post!',
         markDone: '✓ Mark as done',
+
+        // Achievement
+        achievementTitle: 'True Engagement Champion!',
+        achievementDesc: 'Congratulations! You completed the Mission 🎉',
+        downloadFrame: '⬇️ Download Frame',
+        shareToX: '📱 Share to X',
     },
 } as const;
 

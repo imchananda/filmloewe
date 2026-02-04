@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLanguage } from './i18n/LanguageContext';
+import AchievementPopup, { AchievementFloatingButton } from './components/AchievementPopup';
 
 // Types
 interface Task {
@@ -102,16 +103,59 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(30);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // Achievement popup states
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [achievementUnlocked, setAchievementUnlocked] = useState(() => {
+    try {
+      return localStorage.getItem('social-tracker-achievement-unlocked') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [achievementShownOnce, setAchievementShownOnce] = useState(() => {
+    try {
+      return localStorage.getItem('social-tracker-achievement-shown') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   // Mark as loaded after first render
   useEffect(() => {
     setHasLoaded(true);
   }, []);
 
-  // Save completed state to localStorage (only after initial load)
+  // Save completed state to localStorage (only after initial load AND when tasks are present)
   useEffect(() => {
-    if (!hasLoaded) return;
+    if (!hasLoaded || tasks.length === 0) return;
     localStorage.setItem('social-tracker-completed', JSON.stringify(completed));
-  }, [completed, hasLoaded]);
+  }, [completed, hasLoaded, tasks.length]);
+
+  // Check for 100% achievement
+  useEffect(() => {
+    if (!hasLoaded || tasks.length === 0) return;
+
+    const allCompleted = tasks.every(task => completed[task.id]);
+
+    if (allCompleted && !achievementUnlocked) {
+      // First time reaching 100%
+      setAchievementUnlocked(true);
+      localStorage.setItem('social-tracker-achievement-unlocked', 'true');
+
+      // Show popup automatically only once
+      if (!achievementShownOnce) {
+        setShowAchievement(true);
+        setAchievementShownOnce(true);
+        localStorage.setItem('social-tracker-achievement-shown', 'true');
+      }
+    } else if (!allCompleted && achievementUnlocked) {
+      // User unchecked something, revoke achievement
+      setAchievementUnlocked(false);
+      localStorage.setItem('social-tracker-achievement-unlocked', 'false');
+      setAchievementShownOnce(false);
+      localStorage.setItem('social-tracker-achievement-shown', 'false');
+    }
+  }, [tasks, completed, hasLoaded, achievementUnlocked, achievementShownOnce]);
 
   // Parse entire CSV text handling quoted strings with newlines
   const parseCSV = (csvText: string): string[][] => {
@@ -201,12 +245,15 @@ function App() {
           };
 
           const task: Task = {
-            id: getVal('id') || String(i),
+            id: getVal('id') || getVal('url') || String(i),
             platform: (getVal('platform') || 'x').toLowerCase().trim() as Task['platform'],
             url: getVal('url') || '',
             hashtags: getVal('hashtags') || '',
             title: getVal('title') || getVal('note') || '',
           };
+
+          // Debug: log parsed data
+          console.log(`Row ${i}: platform="${getVal('platform')}" -> "${task.platform}", title="${task.title}"`);
 
           if (task.url) {
             parsedTasks.push(task);
@@ -454,7 +501,7 @@ function App() {
                 (index === 0 || !completed[visibleTasks[index - 1]?.id]);
 
               return (
-                <div key={task.id}>
+                <div key={task.url}>
                   {/* Divider before completed section */}
                   {isFirstCompleted && showCompleted && (
                     <div className="flex items-center gap-2 py-3">
@@ -638,6 +685,20 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Achievement Popup */}
+      <AchievementPopup
+        isOpen={showAchievement}
+        onClose={() => setShowAchievement(false)}
+        completedCount={completedCount}
+        totalCount={tasks.length}
+      />
+
+      {/* Achievement Floating Button */}
+      <AchievementFloatingButton
+        onClick={() => setShowAchievement(true)}
+        isUnlocked={achievementUnlocked}
+      />
     </div>
   );
 }
