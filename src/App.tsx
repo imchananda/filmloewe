@@ -73,24 +73,33 @@ const platformConfig = {
 // ===========================================
 // ⚙️ SETTINGS - แก้ไขตรงนี้
 // ===========================================
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1toYmcphQ3KYfqCAt35G_ml8fh9f8qgEASUPHpAksLjk/export?format=csv&gid=0';
+const SPREADSHEET_ID = '1toYmcphQ3KYfqCAt35G_ml8fh9f8qgEASUPHpAksLjk';
+const SHEETS_CONFIG = [
+  { date: '4 Feb', gid: '0' },
+  { date: '5 Feb', gid: '40017126' }, // อัปเดต GID จากลิงก์ที่ให้มา
+];
 const BACKGROUND_IMAGE = 'https://pbs.twimg.com/media/HAOoaBRaUAAtTqq?format=jpg&name=large'; // ใส่ URL รูปพื้นหลัง หรือเว้นว่างไว้
 // ===========================================
 
 function App() {
   const { language, setLanguage, t } = useLanguage();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Initialize completed state from localStorage immediately (no race condition)
-  const [completed, setCompleted] = useState<CompletedState>(() => {
+  // Initialize completed state from localStorage
+  const [completed, setCompleted] = useState<Record<string, CompletedState>>(() => {
     try {
-      const saved = localStorage.getItem('social-tracker-completed');
-      if (saved) {
-        return JSON.parse(saved);
+      const saved = localStorage.getItem('social-tracker-completed-v2');
+      if (saved) return JSON.parse(saved);
+
+      // Migration from old flat format to v2
+      const oldSaved = localStorage.getItem('social-tracker-completed');
+      if (oldSaved) {
+        return { '4 Feb': JSON.parse(oldSaved) };
       }
     } catch (e) {
       console.error('Failed to load saved data:', e);
@@ -99,66 +108,104 @@ function App() {
   });
 
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
+  const [activeSheetIndex, setActiveSheetIndex] = useState(0); // 0 = 4 Feb, 1 = 5 Feb
+  const activeSheetDate = SHEETS_CONFIG[activeSheetIndex].date;
+
   const [showCompleted, setShowCompleted] = useState(true);
   const [visibleCount, setVisibleCount] = useState(30);
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Achievement popup states
+  // Achievement popup states (Global)
   const [showAchievement, setShowAchievement] = useState(false);
   const [achievementUnlocked, setAchievementUnlocked] = useState(() => {
     try {
-      return localStorage.getItem('social-tracker-achievement-unlocked') === 'true';
+      const saved = localStorage.getItem('social-tracker-achievement-unlocked-v3');
+      if (saved) return saved === 'true';
     } catch {
       return false;
     }
+    return false;
   });
+
   const [achievementShownOnce, setAchievementShownOnce] = useState(() => {
     try {
-      return localStorage.getItem('social-tracker-achievement-shown') === 'true';
+      const saved = localStorage.getItem('social-tracker-achievement-shown-v3');
+      if (saved) return saved === 'true';
     } catch {
       return false;
     }
+    return false;
   });
+
+  // Helper selectors
+  const tasks = useMemo(() => allTasks[activeSheetDate] || [], [allTasks, activeSheetDate]);
+  const currentCompleted = useMemo(() => completed[activeSheetDate] || {}, [completed, activeSheetDate]);
+
+  // Create a flat list of all tasks for global calculations
+  const totalTasksList = useMemo(() => Object.values(allTasks).flat(), [allTasks]);
+  const totalCompletedCount = useMemo(() => {
+    let count = 0;
+    Object.entries(completed).forEach(([date, sheetCompleted]) => {
+      const sheetTasks = allTasks[date] || [];
+      sheetTasks.forEach(task => {
+        if (sheetCompleted[task.id]) count++;
+      });
+    });
+    return count;
+  }, [completed, allTasks]);
+
+  // Check if a specific sheet is completed
+  const isSheetCompleted = useCallback((date: string) => {
+    const sheetTasks = allTasks[date] || [];
+    if (sheetTasks.length === 0) return false;
+    const sheetCompleted = completed[date] || {};
+    return sheetTasks.every(task => !!sheetCompleted[task.id]);
+  }, [allTasks, completed]);
 
   // Mark as loaded after first render
   useEffect(() => {
     setHasLoaded(true);
   }, []);
 
-  // Save completed state to localStorage (only after initial load AND when tasks are present)
+  // Save completed state to localStorage
   useEffect(() => {
-    if (!hasLoaded || tasks.length === 0) return;
-    localStorage.setItem('social-tracker-completed', JSON.stringify(completed));
-  }, [completed, hasLoaded, tasks.length]);
+    if (!hasLoaded) return;
+    localStorage.setItem('social-tracker-completed-v2', JSON.stringify(completed));
+  }, [completed, hasLoaded]);
 
-  // Check for 100% achievement
+  // Check for 100% global achievement
   useEffect(() => {
-    if (!hasLoaded || tasks.length === 0) return;
+    // Only check if we have loaded all sheets defined in config
+    const loadedSheetCount = Object.keys(allTasks).length;
+    if (!hasLoaded || loading || loadedSheetCount < SHEETS_CONFIG.length || totalTasksList.length === 0) return;
 
-    const allCompleted = tasks.every(task => completed[task.id]);
+    // Strict logic: Check every task in every sheet specifically
+    const allCompleted = SHEETS_CONFIG.every(sheet => {
+      const sheetTasks = allTasks[sheet.date] || [];
+      if (sheetTasks.length === 0) return false;
+      const sheetCompleted = completed[sheet.date] || {};
+      return sheetTasks.every(task => !!sheetCompleted[task.id]);
+    });
 
     if (allCompleted && !achievementUnlocked) {
-      // First time reaching 100%
       setAchievementUnlocked(true);
-      localStorage.setItem('social-tracker-achievement-unlocked', 'true');
+      localStorage.setItem('social-tracker-achievement-unlocked-v3', 'true');
 
-      // Show popup automatically only once
       if (!achievementShownOnce) {
         setShowAchievement(true);
         setAchievementShownOnce(true);
-        localStorage.setItem('social-tracker-achievement-shown', 'true');
+        localStorage.setItem('social-tracker-achievement-shown-v3', 'true');
       }
     } else if (!allCompleted && achievementUnlocked) {
-      // User unchecked something, revoke achievement
+      // User unchecked something, revoke unlock but DON'T reset "shown once"
+      // to avoid annoying popups on every refresh or re-completion.
       setAchievementUnlocked(false);
-      localStorage.setItem('social-tracker-achievement-unlocked', 'false');
-      setAchievementShownOnce(false);
-      localStorage.setItem('social-tracker-achievement-shown', 'false');
+      localStorage.setItem('social-tracker-achievement-unlocked-v3', 'false');
     }
-  }, [tasks, completed, hasLoaded, achievementUnlocked, achievementShownOnce]);
+  }, [allTasks, totalTasksList, completed, hasLoaded, loading, achievementUnlocked, achievementShownOnce]);
 
   // Parse entire CSV text handling quoted strings with newlines
-  const parseCSV = (csvText: string): string[][] => {
+  const parseCSV = useCallback((csvText: string): string[][] => {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentCell = '';
@@ -211,68 +258,59 @@ function App() {
     }
 
     return rows;
-  };
+  }, []);
 
-  // Fetch data from Google Sheets
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(SHEET_URL);
+  // Fetch data from Google Sheets (Fetch all on mount)
+  const fetchAllData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      const results: Record<string, Task[]> = {};
+
+      await Promise.all(SHEETS_CONFIG.map(async (sheet) => {
+        const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${sheet.gid}`;
+        const response = await fetch(url);
         let csvText = await response.text();
-
-        // Remove Byte Order Mark (BOM) if exists
         csvText = csvText.replace(/^\uFEFF/, '');
-
-        // Parse CSV properly (handles newlines in quoted cells)
         const rows = parseCSV(csvText);
 
-        if (rows.length === 0) {
-          setTasks([]);
-          setError(null);
-          return;
-        }
-
-        const headers = rows[0].map(h => h.toLowerCase());
-        const parsedTasks: Task[] = [];
-
-        for (let i = 1; i < rows.length; i++) {
-          const values = rows[i];
-
-          const getVal = (headerName: string) => {
-            const idx = headers.indexOf(headerName);
-            return idx !== -1 ? (values[idx] || '') : '';
-          };
-
-          const task: Task = {
-            id: getVal('id') || getVal('url') || String(i),
-            platform: (getVal('platform') || 'x').toLowerCase().trim() as Task['platform'],
-            url: getVal('url') || '',
-            hashtags: getVal('hashtags') || '',
-            title: getVal('title') || getVal('note') || '',
-          };
-
-          // Debug: log parsed data
-          console.log(`Row ${i}: platform="${getVal('platform')}" -> "${task.platform}", title="${task.title}"`);
-
-          if (task.url) {
-            parsedTasks.push(task);
+        if (rows.length > 0) {
+          const headers = rows[0].map(h => h.toLowerCase());
+          const parsedTasks: Task[] = [];
+          for (let i = 1; i < rows.length; i++) {
+            const values = rows[i];
+            const getVal = (headerName: string) => {
+              const idx = headers.indexOf(headerName);
+              return idx !== -1 ? (values[idx] || '') : '';
+            };
+            const task: Task = {
+              id: getVal('id') || getVal('url') || String(i),
+              platform: (getVal('platform') || 'x').toLowerCase().trim() as Task['platform'],
+              url: getVal('url') || '',
+              hashtags: getVal('hashtags') || '',
+              title: getVal('title') || getVal('note') || '',
+            };
+            if (task.url) parsedTasks.push(task);
           }
+          results[sheet.date] = parsedTasks.reverse();
         }
+      }));
 
-        // Reverse to show latest (bottom of sheet) first
-        setTasks(parsedTasks.reverse());
-        setError(null);
-      } catch (err) {
-        setError('ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบ Google Sheet URL');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setAllTasks(results);
+      setError(null);
+    } catch (err) {
+      setError('ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบ Google Sheet URL');
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [parseCSV]);
 
-    fetchData();
-  }, []);
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
@@ -280,32 +318,32 @@ function App() {
     if (filterPlatform) {
       result = result.filter(t => t.platform === filterPlatform);
     }
-    const pending = result.filter(t => !completed[t.id]);
-    const done = result.filter(t => completed[t.id]);
+    const pending = result.filter(t => !currentCompleted[t.id]);
+    const done = result.filter(t => currentCompleted[t.id]);
     return showCompleted ? [...pending, ...done] : pending;
-  }, [tasks, completed, filterPlatform, showCompleted]);
+  }, [tasks, currentCompleted, filterPlatform, showCompleted]);
 
   // Lazy load
   const visibleTasks = useMemo(() => {
     return filteredTasks.slice(0, visibleCount);
   }, [filteredTasks, visibleCount]);
 
-  const pendingCount = tasks.filter(t => !completed[t.id]).length;
-  const completedCount = tasks.filter(t => completed[t.id]).length;
+  const pendingCount = tasks.filter(t => !currentCompleted[t.id]).length;
+  const completedCount = tasks.filter(t => currentCompleted[t.id]).length;
 
   // Platform counts
   const platformCounts = useMemo(() => {
     const counts: Record<string, { pending: number; done: number }> = {};
     tasks.forEach(t => {
       if (!counts[t.platform]) counts[t.platform] = { pending: 0, done: 0 };
-      if (completed[t.id]) {
+      if (currentCompleted[t.id]) {
         counts[t.platform].done++;
       } else {
         counts[t.platform].pending++;
       }
     });
     return counts;
-  }, [tasks, completed]);
+  }, [tasks, currentCompleted]);
 
   // Get hashtags for platform
   const getCaption = (task: Task): string => {
@@ -333,7 +371,10 @@ function App() {
   const handleMarkComplete = (taskId: string) => {
     setCompleted(prev => ({
       ...prev,
-      [taskId]: { completedAt: new Date().toISOString() },
+      [activeSheetDate]: {
+        ...(prev[activeSheetDate] || {}),
+        [taskId]: { completedAt: new Date().toISOString() },
+      },
     }));
     setSelectedTask(null);
   };
@@ -342,9 +383,12 @@ function App() {
   const handleUnmark = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setCompleted(prev => {
-      const newState = { ...prev };
-      delete newState[taskId];
-      return newState;
+      const sheetCompleted = { ...(prev[activeSheetDate] || {}) };
+      delete sheetCompleted[taskId];
+      return {
+        ...prev,
+        [activeSheetDate]: sheetCompleted,
+      };
     });
   };
 
@@ -398,6 +442,18 @@ function App() {
               </h1>
 
               <div className="flex items-center gap-2">
+                {/* Refresh Button */}
+                <button
+                  onClick={() => fetchAllData(true)}
+                  disabled={refreshing}
+                  className={`p-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-all ${refreshing ? 'animate-spin opacity-50' : ''}`}
+                  title="Update Data"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-purple-300">
+                    <path d="M4 4v5h5M20 20v-5h-5M20 9A9 9 0 0 0 5.64 5.64L4 9M4 15a9 9 0 0 0 14.36 3.36L20 15" />
+                  </svg>
+                </button>
+
                 {/* Language Buttons */}
                 <div className="flex rounded-full overflow-hidden border border-white/20">
                   <button
@@ -426,6 +482,31 @@ function App() {
                   <span className="text-green-300 text-sm">{completedCount}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Date Tabs */}
+            <div className="flex gap-2 mb-4 bg-white/5 p-1 rounded-xl border border-white/10">
+              {SHEETS_CONFIG.map((sheet, index) => {
+                const isComplete = isSheetCompleted(sheet.date);
+                return (
+                  <button
+                    key={sheet.date}
+                    onClick={() => {
+                      setActiveSheetIndex(index);
+                      setVisibleCount(30); // Reset scroll on tab change
+                    }}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeSheetIndex === index
+                      ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+                      : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                      }`}
+                  >
+                    <span>{sheet.date}</span>
+                    {isComplete && (
+                      <span className="text-green-300 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">✓</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Progress bar */}
@@ -496,9 +577,9 @@ function App() {
           <div className="flex flex-col gap-1.5 pb-24">
             {visibleTasks.map((task, index) => {
               const config = platformConfig[task.platform];
-              const isCompleted = !!completed[task.id];
+              const isCompleted = !!currentCompleted[task.id];
               const isFirstCompleted = isCompleted &&
-                (index === 0 || !completed[visibleTasks[index - 1]?.id]);
+                (index === 0 || !currentCompleted[visibleTasks[index - 1]?.id]);
 
               return (
                 <div key={task.url}>
@@ -579,22 +660,31 @@ function App() {
         </main>
 
         {/* Floating stats */}
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-xl rounded-full px-5 py-2.5 border border-white/10 flex items-center gap-4 shadow-2xl shadow-black/50 z-30">
-          <div className="text-center">
-            <div className="text-lg font-bold text-amber-300">{pendingCount}</div>
-            <div className="text-[10px] text-white/50">{t('pending')}</div>
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-xl rounded-full px-5 py-2.5 border border-white/10 flex items-center gap-3 shadow-2xl shadow-black/50 z-30 scale-90 sm:scale-100">
+          <div className="flex flex-col items-center">
+            <div className="text-sm font-bold text-amber-300">{pendingCount}</div>
+            <div className="text-[9px] text-white/50 uppercase tracking-wider">{t('pending')}</div>
           </div>
-          <div className="w-px h-8 bg-white/10" />
-          <div className="text-center">
-            <div className="text-lg font-bold text-green-400">{completedCount}</div>
-            <div className="text-[10px] text-white/50">{t('done')}</div>
+          <div className="w-px h-6 bg-white/10" />
+          <div className="flex flex-col items-center">
+            <div className="text-sm font-bold text-green-400">{completedCount}</div>
+            <div className="text-[9px] text-white/50 uppercase tracking-wider">{t('done')}</div>
           </div>
-          <div className="w-px h-8 bg-white/10" />
-          <div className="text-center">
-            <div className="text-lg font-bold text-purple-300">
+          <div className="w-px h-6 bg-white/10" />
+          <div className="flex flex-col items-center">
+            <div className="text-sm font-bold text-purple-300">
               {tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0}%
             </div>
-            <div className="text-[10px] text-white/50">{t('progress')}</div>
+            <div className="text-[9px] text-white/50 uppercase tracking-wider">Day</div>
+          </div>
+          <div className="w-px h-6 px-1">
+            <div className="w-px h-full bg-white/20" />
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500">
+              {totalTasksList.length ? Math.round((totalCompletedCount / totalTasksList.length) * 100) : 0}%
+            </div>
+            <div className="text-[9px] text-white/50 uppercase tracking-wider">Total</div>
           </div>
         </div>
       </div>
@@ -672,7 +762,7 @@ function App() {
                 </button>
 
                 {/* Mark Complete Button */}
-                {!completed[selectedTask.id] && (
+                {!currentCompleted[selectedTask.id] && (
                   <button
                     onClick={() => handleMarkComplete(selectedTask.id)}
                     className="w-full py-3 rounded-xl font-semibold bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30 transition-all duration-300"
@@ -690,8 +780,8 @@ function App() {
       <AchievementPopup
         isOpen={showAchievement}
         onClose={() => setShowAchievement(false)}
-        completedCount={completedCount}
-        totalCount={tasks.length}
+        completedCount={totalCompletedCount}
+        totalCount={totalTasksList.length}
       />
 
       {/* Achievement Floating Button */}
