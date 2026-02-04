@@ -202,7 +202,7 @@ function App() {
 
           const task: Task = {
             id: getVal('id') || String(i),
-            platform: (getVal('platform') || 'x').toLowerCase() as Task['platform'],
+            platform: (getVal('platform') || 'x').toLowerCase().trim() as Task['platform'],
             url: getVal('url') || '',
             hashtags: getVal('hashtags') || '',
             title: getVal('title') || getVal('note') || '',
