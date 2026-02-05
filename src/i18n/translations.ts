@@ -48,6 +48,9 @@ export const translations = {
         copiedMessage: '✓ คัดลอกข้อความแล้ว!',
         copiedHashtags: '✓ คัดลอก Hashtags แล้ว!',
         copiedBoth: '✓ คัดลอกทั้งหมดแล้ว!',
+
+        // Focus
+        focusBadge: '⭐ สำคัญ',
     },
     en: {
         // Header
@@ -96,6 +99,9 @@ export const translations = {
         copiedMessage: '✓ Message Copied!',
         copiedHashtags: '✓ Hashtags Copied!',
         copiedBoth: '✓ All Copied!',
+
+        // Focus
+        focusBadge: '⭐ Focus',
     },
 } as const;
 

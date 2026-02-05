@@ -9,6 +9,7 @@ interface Task {
   url: string;
   hashtags: string;
   title: string;
+  focus: boolean;
 }
 
 interface CompletedState {
@@ -290,12 +291,14 @@ function App() {
               const idx = headers.indexOf(headerName);
               return idx !== -1 ? (values[idx] || '') : '';
             };
+            const focusValue = getVal('focus').toLowerCase().trim();
             const task: Task = {
               id: getVal('id') || getVal('url') || String(i),
               platform: (getVal('platform') || 'x').toLowerCase().trim() as Task['platform'],
               url: getVal('url') || '',
               hashtags: getVal('hashtags') || '',
               title: getVal('title') || getVal('note') || '',
+              focus: focusValue === 'true' || focusValue === '1' || focusValue === 'yes',
             };
             if (task.url) parsedTasks.push(task);
           }
@@ -346,7 +349,7 @@ function App() {
     fetchPositiveMessages();
   }, [fetchAllData, fetchPositiveMessages]);
 
-  // Filter and sort tasks
+  // Filter and sort tasks (Focus posts always on top)
   const filteredTasks = useMemo(() => {
     let result = tasks;
     if (filterPlatform) {
@@ -354,7 +357,11 @@ function App() {
     }
     const pending = result.filter(t => !currentCompleted[t.id]);
     const done = result.filter(t => currentCompleted[t.id]);
-    return showCompleted ? [...pending, ...done] : pending;
+    // Sort: Focus posts first, then by original order
+    const sortByFocus = (a: Task, b: Task) => (b.focus ? 1 : 0) - (a.focus ? 1 : 0);
+    const sortedPending = [...pending].sort(sortByFocus);
+    const sortedDone = [...done].sort(sortByFocus);
+    return showCompleted ? [...sortedPending, ...sortedDone] : sortedPending;
   }, [tasks, currentCompleted, filterPlatform, showCompleted]);
 
   // Lazy load
@@ -677,7 +684,9 @@ function App() {
                     onClick={() => setSelectedTask(task)}
                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all border backdrop-blur-sm ${isCompleted
                       ? 'bg-white/[0.03] border-green-500/20 opacity-50'
-                      : 'bg-white/[0.06] border-white/10 hover:bg-white/[0.1] shadow-lg shadow-black/20'
+                      : task.focus
+                        ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-400/30 hover:from-amber-500/20 hover:to-orange-500/20 shadow-lg shadow-amber-500/10 ring-1 ring-amber-400/20'
+                        : 'bg-white/[0.06] border-white/10 hover:bg-white/[0.1] shadow-lg shadow-black/20'
                       }`}
                   >
                     {/* Platform badge */}
@@ -687,8 +696,15 @@ function App() {
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white/90 truncate">
-                        {task.title || t('noTitle')}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-white/90 truncate">
+                          {task.title || t('noTitle')}
+                        </span>
+                        {task.focus && !isCompleted && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full flex-shrink-0 animate-pulse">
+                            {t('focusBadge')}
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-white/40 truncate">
                         {task.hashtags}
