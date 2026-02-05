@@ -37,6 +37,17 @@ export const translations = {
         achievementDesc: 'ขอแสดงความยินดี! คุณทำ Mission ครบแล้ว 🎉',
         downloadFrame: '⬇️ ดาวน์โหลดกรอบรูป',
         shareToX: '📱 แชร์ไป X',
+
+        // Caption Generator
+        generateCaption: '✨ สร้างข้อความ',
+        regenerate: '🔄',
+        generatedMessage: 'ข้อความที่สร้าง:',
+        copyMessageOnly: '📋 คัดลอกข้อความ',
+        copyHashtagsOnly: '# คัดลอก Hashtags',
+        copyBoth: '📋 คัดลอกทั้งหมด',
+        copiedMessage: '✓ คัดลอกข้อความแล้ว!',
+        copiedHashtags: '✓ คัดลอก Hashtags แล้ว!',
+        copiedBoth: '✓ คัดลอกทั้งหมดแล้ว!',
     },
     en: {
         // Header
@@ -74,6 +85,17 @@ export const translations = {
         achievementDesc: 'Congratulations! You completed the Mission 🎉',
         downloadFrame: '⬇️ Download Frame',
         shareToX: '📱 Share to X',
+
+        // Caption Generator
+        generateCaption: '✨ Generate Caption',
+        regenerate: '🔄',
+        generatedMessage: 'Generated Message:',
+        copyMessageOnly: '📋 Copy Message',
+        copyHashtagsOnly: '# Copy Hashtags',
+        copyBoth: '📋 Copy All',
+        copiedMessage: '✓ Message Copied!',
+        copiedHashtags: '✓ Hashtags Copied!',
+        copiedBoth: '✓ All Copied!',
     },
 } as const;
 

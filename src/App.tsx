@@ -78,6 +78,7 @@ const SHEETS_CONFIG = [
   { date: '4 Feb', gid: '0' },
   { date: '5 Feb', gid: '40017126' }, // อัปเดต GID จากลิงก์ที่ให้มา
 ];
+const POSITIVE_MESSAGES_GID = '701668094'; // Sheet for positive messages
 const BACKGROUND_IMAGE = 'https://pbs.twimg.com/media/HAOoaBRaUAAtTqq?format=jpg&name=large'; // ใส่ URL รูปพื้นหลัง หรือเว้นว่างไว้
 // ===========================================
 
@@ -89,6 +90,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedType, setCopiedType] = useState<'message' | 'hashtags' | 'both' | null>(null);
+
+  // Positive messages state
+  const [positiveMessages, setPositiveMessages] = useState<string[]>([]);
+  const [generatedMessage, setGeneratedMessage] = useState<string>('');
 
   // Initialize completed state from localStorage
   const [completed, setCompleted] = useState<Record<string, CompletedState>>(() => {
@@ -308,9 +314,37 @@ function App() {
     }
   }, [parseCSV]);
 
+  // Fetch positive messages from Google Sheets
+  const fetchPositiveMessages = useCallback(async () => {
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${POSITIVE_MESSAGES_GID}`;
+      const response = await fetch(url);
+      let csvText = await response.text();
+      csvText = csvText.replace(/^\uFEFF/, '');
+      const rows = parseCSV(csvText);
+
+      if (rows.length > 0) {
+        const headers = rows[0].map(h => h.toLowerCase());
+        const messageIdx = headers.indexOf('message_en');
+
+        if (messageIdx !== -1) {
+          const messages: string[] = [];
+          for (let i = 1; i < rows.length; i++) {
+            const msg = rows[i][messageIdx]?.trim();
+            if (msg) messages.push(msg);
+          }
+          setPositiveMessages(messages);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch positive messages:', err);
+    }
+  }, [parseCSV]);
+
   useEffect(() => {
     fetchAllData();
-  }, [fetchAllData]);
+    fetchPositiveMessages();
+  }, [fetchAllData, fetchPositiveMessages]);
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
@@ -350,7 +384,53 @@ function App() {
     return task.hashtags || '';
   };
 
-  // Copy to clipboard
+  // Generate random positive message
+  const generateRandomMessage = useCallback(() => {
+    if (positiveMessages.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * positiveMessages.length);
+    setGeneratedMessage(positiveMessages[randomIndex]);
+    setCopiedType(null); // Reset copy state when regenerating
+  }, [positiveMessages]);
+
+  // Copy functions for 3 different options
+  const handleCopyMessage = async () => {
+    if (!generatedMessage) return;
+    try {
+      await navigator.clipboard.writeText(generatedMessage);
+      setCopiedType('message');
+      setTimeout(() => setCopiedType(null), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
+  const handleCopyHashtags = async (task: Task) => {
+    const text = getCaption(task);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedType('hashtags');
+      setTimeout(() => setCopiedType(null), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
+  const handleCopyBoth = async (task: Task) => {
+    const hashtags = getCaption(task);
+    const text = generatedMessage
+      ? `${generatedMessage}\n\n${hashtags}`
+      : hashtags;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedType('both');
+      setTimeout(() => setCopiedType(null), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
+  // Legacy copy function (keeping for compatibility)
   const handleCopy = async (task: Task) => {
     const text = getCaption(task);
     try {
@@ -730,50 +810,129 @@ function App() {
 
               {/* Modal Body */}
               <div className="p-5 space-y-4">
-                {/* Caption Box */}
+                {/* Hashtags Box */}
                 <div>
                   <label className="text-purple-300 text-sm font-medium mb-2 block">
                     {t('hashtagsLabel')}
                   </label>
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10 max-h-40 overflow-y-auto">
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10 max-h-32 overflow-y-auto">
                     <p className="text-white whitespace-pre-wrap leading-relaxed text-sm">
                       {selectedTask.hashtags || t('noHashtags')}
                     </p>
                   </div>
                 </div>
 
-                {/* Copy Button */}
-                <button
-                  onClick={() => handleCopy(selectedTask)}
-                  className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${copied
-                    ? 'bg-green-500 text-white'
-                    : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
-                    }`}
-                >
-                  {copied ? t('copied') : t('copyText')}
-                </button>
+                {/* Caption Generator Section */}
+                {positiveMessages.length > 0 && (
+                  <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
+                    {/* Generate Button */}
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        onClick={generateRandomMessage}
+                        className="flex-1 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-400 hover:to-pink-400 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      >
+                        {t('generateCaption')}
+                      </button>
+                      {generatedMessage && (
+                        <button
+                          onClick={generateRandomMessage}
+                          className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                          title="Regenerate"
+                        >
+                          {t('regenerate')}
+                        </button>
+                      )}
+                    </div>
 
-                {/* Go to Post Button */}
-                <button
-                  onClick={() => handleGoToPost(selectedTask)}
-                  className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${platformConfig[selectedTask.platform].color} ${platformConfig[selectedTask.platform].hoverColor} transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02]`}
-                >
-                  {t('goPost')}
-                </button>
+                    {/* Generated Message Display */}
+                    {generatedMessage && (
+                      <div className="mb-3">
+                        <label className="text-pink-300 text-xs font-medium mb-1.5 block">
+                          {t('generatedMessage')}
+                        </label>
+                        <div className="bg-black/20 rounded-lg p-3 border border-white/10">
+                          <p className="text-white text-sm leading-relaxed">{generatedMessage}</p>
+                        </div>
+                      </div>
+                    )}
 
-                {/* Mark Complete Button */}
-                {!currentCompleted[selectedTask.id] && (
+                    {/* Copy Buttons - 3 Options */}
+                    <div className="space-y-2">
+                      {/* Copy Message Only */}
+                      {generatedMessage && (
+                        <button
+                          onClick={handleCopyMessage}
+                          className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all duration-300 ${copiedType === 'message'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-white/10 hover:bg-white/20 text-white/80 border border-white/10'
+                            }`}
+                        >
+                          {copiedType === 'message' ? t('copiedMessage') : t('copyMessageOnly')}
+                        </button>
+                      )}
+
+                      {/* Copy Hashtags Only */}
+                      <button
+                        onClick={() => handleCopyHashtags(selectedTask)}
+                        className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all duration-300 ${copiedType === 'hashtags'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-white/10 hover:bg-white/20 text-white/80 border border-white/10'
+                          }`}
+                      >
+                        {copiedType === 'hashtags' ? t('copiedHashtags') : t('copyHashtagsOnly')}
+                      </button>
+
+                      {/* Copy Both (Message + Hashtags) */}
+                      {generatedMessage && (
+                        <button
+                          onClick={() => handleCopyBoth(selectedTask)}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${copiedType === 'both'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gradient-to-r from-amber-500/20 to-pink-500/20 hover:from-amber-500/30 hover:to-pink-500/30 text-amber-200 border border-amber-500/30'
+                            }`}
+                        >
+                          {copiedType === 'both' ? t('copiedBoth') : t('copyBoth')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback Copy Button if no positive messages */}
+                {positiveMessages.length === 0 && (
                   <button
-                    onClick={() => handleMarkComplete(selectedTask.id)}
-                    className="w-full py-3 rounded-xl font-semibold bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30 transition-all duration-300"
+                    onClick={() => handleCopy(selectedTask)}
+                    className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${copied
+                      ? 'bg-green-500 text-white'
+                      : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
+                      }`}
                   >
-                    {t('markDone')}
+                    {copied ? t('copied') : t('copyText')}
                   </button>
                 )}
               </div>
+
+              {/* Go to Post Button */}
+              <button
+                onClick={() => handleGoToPost(selectedTask)}
+                className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${platformConfig[selectedTask.platform].color} ${platformConfig[selectedTask.platform].hoverColor} transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02]`}
+              >
+                {t('goPost')}
+              </button>
+
+              {/* Mark Complete Button */}
+              {!currentCompleted[selectedTask.id] && (
+                <button
+                  onClick={() => handleMarkComplete(selectedTask.id)}
+                  className="w-full py-3 rounded-xl font-semibold bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30 transition-all duration-300"
+                >
+                  {t('markDone')}
+                </button>
+              )}
             </div>
           </div>
         </div>
+
       )}
 
       {/* Achievement Popup */}
