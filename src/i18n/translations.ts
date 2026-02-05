@@ -39,7 +39,7 @@ export const translations = {
         shareToX: '📱 แชร์ไป X',
 
         // Caption Generator
-        generateCaption: '✨ สร้างข้อความ',
+        generateCaption: '✨ สุ่มข้อความ',
         regenerate: '🔄',
         generatedMessage: 'ข้อความที่สร้าง:',
         copyMessageOnly: '📋 คัดลอกข้อความ',
@@ -87,7 +87,7 @@ export const translations = {
         shareToX: '📱 Share to X',
 
         // Caption Generator
-        generateCaption: '✨ Generate Caption',
+        generateCaption: '✨ Random Caption',
         regenerate: '🔄',
         generatedMessage: 'Generated Message:',
         copyMessageOnly: '📋 Copy Message',
