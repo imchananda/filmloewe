@@ -785,170 +785,153 @@ function App() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Minimal Modal */}
       {selectedTask && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
           onClick={() => setSelectedTask(null)}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
 
           {/* Modal Content */}
           <div
-            className="relative w-full max-w-lg mx-4 mb-0 sm:mb-4"
+            className="relative w-full max-w-md mx-3 mb-0 sm:mb-4"
             onClick={e => e.stopPropagation()}
           >
-            <div className="bg-gradient-to-b from-slate-800/98 to-slate-900/98 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+            <div className="bg-slate-900/95 backdrop-blur-xl rounded-2xl sm:rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
               {/* Handle bar (mobile) */}
-              <div className="w-10 h-1 bg-white/30 rounded-full mx-auto mt-3 sm:hidden" />
+              <div className="w-8 h-1 bg-white/20 rounded-full mx-auto mt-2 sm:hidden" />
 
-              {/* Modal Header */}
-              <div className={`bg-gradient-to-r ${platformConfig[selectedTask.platform].color} px-5 py-4 mt-2 sm:mt-0`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{platformConfig[selectedTask.platform].icon}</span>
-                    <div>
-                      <h2 className="text-lg font-bold text-white">
-                        {platformConfig[selectedTask.platform].name}
-                      </h2>
-                      <p className="text-white/60 text-sm">{selectedTask.title}</p>
-                    </div>
+              {/* Compact Header */}
+              <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${platformConfig[selectedTask.platform].color} flex items-center justify-center`}>
+                    {platformConfig[selectedTask.platform].icon}
                   </div>
-                  <button
-                    onClick={() => setSelectedTask(null)}
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                  >
-                    ✕
-                  </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{selectedTask.title || t('noTitle')}</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setSelectedTask(null)}
+                  className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white text-sm transition-colors"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Modal Body */}
-              <div className="p-5 space-y-4">
-                {/* Hashtags Box */}
-                <div>
-                  <label className="text-purple-300 text-sm font-medium mb-2 block">
-                    {t('hashtagsLabel')}
-                  </label>
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10 max-h-32 overflow-y-auto">
-                    <p className="text-white whitespace-pre-wrap leading-relaxed text-sm">
-                      {selectedTask.hashtags || t('noHashtags')}
+              {/* Hashtags - Compact */}
+              {selectedTask.hashtags && (
+                <div className="px-4 pb-3">
+                  <div className="bg-white/5 rounded-lg p-3 max-h-24 overflow-y-auto">
+                    <p className="text-white/80 text-xs whitespace-pre-wrap leading-relaxed">
+                      {selectedTask.hashtags}
                     </p>
                   </div>
                 </div>
+              )}
 
-                {/* Caption Generator Section */}
-                {positiveMessages.length > 0 && (
-                  <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
-                    {/* Generate Button */}
-                    <div className="flex gap-2 mb-3">
+              {/* Caption Generator - Compact */}
+              {positiveMessages.length > 0 && (
+                <div className="px-4 pb-3">
+                  <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                    {/* Generate Row */}
+                    <div className="flex gap-2">
                       <button
                         onClick={generateRandomMessage}
-                        className="flex-1 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-400 hover:to-pink-400 transition-all duration-300 shadow-lg hover:shadow-xl"
+                        className="flex-1 py-2 rounded-lg text-xs font-medium bg-purple-500/80 hover:bg-purple-500 text-white transition-colors"
                       >
                         {t('generateCaption')}
                       </button>
                       {generatedMessage && (
                         <button
                           onClick={generateRandomMessage}
-                          className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-                          title="Regenerate"
+                          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-xs transition-colors"
                         >
                           {t('regenerate')}
                         </button>
                       )}
                     </div>
 
-                    {/* Generated Message Display */}
+                    {/* Generated Message */}
                     {generatedMessage && (
-                      <div className="mb-3">
-                        <label className="text-pink-300 text-xs font-medium mb-1.5 block">
-                          {t('generatedMessage')}
-                        </label>
-                        <div className="bg-black/20 rounded-lg p-3 border border-white/10">
-                          <p className="text-white text-sm leading-relaxed">{generatedMessage}</p>
-                        </div>
-                      </div>
+                      <p className="text-white/90 text-xs p-2 bg-black/20 rounded-lg">{generatedMessage}</p>
                     )}
 
-                    {/* Copy Buttons - 3 Options */}
-                    <div className="space-y-2">
-                      {/* Copy Message Only */}
+                    {/* Copy Buttons - Inline */}
+                    <div className="flex gap-1.5 flex-wrap">
                       {generatedMessage && (
                         <button
                           onClick={handleCopyMessage}
-                          className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all duration-300 ${copiedType === 'message'
+                          className={`flex-1 min-w-[90px] py-1.5 rounded-lg text-xs font-medium transition-colors ${copiedType === 'message'
                             ? 'bg-green-500 text-white'
-                            : 'bg-white/10 hover:bg-white/20 text-white/80 border border-white/10'
+                            : 'bg-white/10 hover:bg-white/15 text-white/70'
                             }`}
                         >
-                          {copiedType === 'message' ? t('copiedMessage') : t('copyMessageOnly')}
+                          {copiedType === 'message' ? '✓ Copied!' : '📋 Copy Msg'}
                         </button>
                       )}
-
-                      {/* Copy Hashtags Only */}
                       <button
                         onClick={() => handleCopyHashtags(selectedTask)}
-                        className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all duration-300 ${copiedType === 'hashtags'
+                        className={`flex-1 min-w-[90px] py-1.5 rounded-lg text-xs font-medium transition-colors ${copiedType === 'hashtags'
                           ? 'bg-green-500 text-white'
-                          : 'bg-white/10 hover:bg-white/20 text-white/80 border border-white/10'
+                          : 'bg-white/10 hover:bg-white/15 text-white/70'
                           }`}
                       >
-                        {copiedType === 'hashtags' ? t('copiedHashtags') : t('copyHashtagsOnly')}
+                        {copiedType === 'hashtags' ? '✓ Copied!' : '📋 Copy #'}
                       </button>
-
-                      {/* Copy Both (Message + Hashtags) */}
                       {generatedMessage && (
                         <button
                           onClick={() => handleCopyBoth(selectedTask)}
-                          className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${copiedType === 'both'
+                          className={`flex-1 min-w-[90px] py-1.5 rounded-lg text-xs font-medium transition-colors ${copiedType === 'both'
                             ? 'bg-green-500 text-white'
-                            : 'bg-gradient-to-r from-amber-500/20 to-pink-500/20 hover:from-amber-500/30 hover:to-pink-500/30 text-amber-200 border border-amber-500/30'
+                            : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300'
                             }`}
                         >
-                          {copiedType === 'both' ? t('copiedBoth') : t('copyBoth')}
+                          {copiedType === 'both' ? '✓ Copied!' : '📋 Copy All'}
                         </button>
                       )}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Fallback Copy Button if no positive messages */}
-                {positiveMessages.length === 0 && (
+              {/* Fallback Copy if no positive messages */}
+              {positiveMessages.length === 0 && (
+                <div className="px-4 pb-3">
                   <button
                     onClick={() => handleCopy(selectedTask)}
-                    className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${copied
+                    className={`w-full py-2 rounded-lg text-xs font-medium transition-colors ${copied
                       ? 'bg-green-500 text-white'
-                      : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
+                      : 'bg-white/10 hover:bg-white/15 text-white/70'
                       }`}
                   >
                     {copied ? t('copied') : t('copyText')}
                   </button>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="p-3 pt-0 flex gap-2">
+                <button
+                  onClick={() => handleGoToPost(selectedTask)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r ${platformConfig[selectedTask.platform].color} hover:opacity-90 transition-opacity`}
+                >
+                  {t('goPost')}
+                </button>
+                {!currentCompleted[selectedTask.id] && (
+                  <button
+                    onClick={() => handleMarkComplete(selectedTask.id)}
+                    className="px-4 py-2.5 rounded-xl text-sm font-medium bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors"
+                  >
+                    ✓
+                  </button>
                 )}
               </div>
-
-              {/* Go to Post Button */}
-              <button
-                onClick={() => handleGoToPost(selectedTask)}
-                className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${platformConfig[selectedTask.platform].color} ${platformConfig[selectedTask.platform].hoverColor} transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02]`}
-              >
-                {t('goPost')}
-              </button>
-
-              {/* Mark Complete Button */}
-              {!currentCompleted[selectedTask.id] && (
-                <button
-                  onClick={() => handleMarkComplete(selectedTask.id)}
-                  className="w-full py-3 rounded-xl font-semibold bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30 transition-all duration-300"
-                >
-                  {t('markDone')}
-                </button>
-              )}
             </div>
           </div>
         </div>
-
       )}
 
       {/* Achievement Popup */}
