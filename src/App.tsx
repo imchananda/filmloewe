@@ -869,7 +869,7 @@ function App() {
                             : 'bg-white/10 hover:bg-white/15 text-white/70'
                             }`}
                         >
-                          {copiedType === 'message' ? '✓ Copied!' : '📋 Copy Msg'}
+                          {copiedType === 'message' ? t('copiedBtn') : t('copyMsgBtn')}
                         </button>
                       )}
                       <button
@@ -879,7 +879,7 @@ function App() {
                           : 'bg-white/10 hover:bg-white/15 text-white/70'
                           }`}
                       >
-                        {copiedType === 'hashtags' ? '✓ Copied!' : '📋 Copy #'}
+                        {copiedType === 'hashtags' ? t('copiedBtn') : t('copyTagsBtn')}
                       </button>
                       {generatedMessage && (
                         <button
@@ -889,7 +889,7 @@ function App() {
                             : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300'
                             }`}
                         >
-                          {copiedType === 'both' ? '✓ Copied!' : '📋 Copy All'}
+                          {copiedType === 'both' ? t('copiedBtn') : t('copyAllBtn')}
                         </button>
                       )}
                     </div>

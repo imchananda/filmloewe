@@ -51,6 +51,12 @@ export const translations = {
 
         // Focus
         focusBadge: '⭐ สำคัญ',
+
+        // Compact Copy Buttons
+        copyMsgBtn: '📋 คัดลอกข้อความ',
+        copyTagsBtn: '📋 คัดลอก #',
+        copyAllBtn: '📋 คัดลอกทั้งหมด',
+        copiedBtn: '✓ คัดลอกแล้ว!',
     },
     en: {
         // Header
@@ -102,6 +108,12 @@ export const translations = {
 
         // Focus
         focusBadge: '⭐ Focus',
+
+        // Compact Copy Buttons
+        copyMsgBtn: '📋 Copy Msg',
+        copyTagsBtn: '📋 Copy #',
+        copyAllBtn: '📋 Copy All',
+        copiedBtn: '✓ Copied!',
     },
 } as const;
 
